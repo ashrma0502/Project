@@ -1,0 +1,2 @@
+[19-11-2025 9:3] Allocated seat (Row:1,Column:1) to Roll 10 (ayush)
+[19-11-2025 9:3] Allocated seat (Row:1,Column:2) to Roll 13 (chittransh)
