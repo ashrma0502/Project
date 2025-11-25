@@ -76,7 +76,7 @@ int main(){
           printf("\nHall is currently full. Allocated %d students before stopping.\n",allocated_count);
           break;
         }
-        printf("\n--- Student %d/%d ---\n",j+1,n);
+        printf("--- Student %d/%d ---\n",j+1,n);
         printf("Roll Number: ");
         scanf(" %d", &rollA);
         printf("Name: ");
