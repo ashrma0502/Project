@@ -1,0 +1,6 @@
+[26-11-2025 11:16] Allocated seat (Row:1,Column:1) to Roll 10 (Ayush)
+[26-11-2025 11:17] Allocated seat (Row:1,Column:2) to Roll 13 (Chitransh)
+[26-11-2025 11:17] Allocated seat (Row:1,Column:3) to Roll 18 (Harshit)
+[26-11-2025 11:17] Allocated seat (Row:2,Column:1) to Roll 35 (Priyanshu)
+[26-11-2025 11:18] Allocated seat (Row:2,Column:2) to Roll 44 (Jaswant)
+[26-11-2025 11:18] Deallocated seat (Row:1,Column:1) of Roll 10 (Ayush)
