@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h> // Objective: Used to add timestamp at the time of allocation/deallocation
-#include <stdbool.h> // Objective: Used to declare the boolean datatype as per need
+#include <stdbool.h> // Objective: Used to declare the boolean datatype as per need in program
 // Objective: Structure used to store the student details
 struct Student{
   int roll;
@@ -24,6 +24,7 @@ int main(){
   scanf(" %d",&Se.rows);
   printf("Enter number of columns:");
   scanf(" %d",&Se.cols);
+  // Objective: Dynamic memory allocation for the current program execution
   Se.seat=(int **)malloc(Se.rows*sizeof(int *));
   for(int r=0;r<Se.rows;r++){
     Se.seat[r]=(int *)calloc(Se.cols,sizeof(int));
@@ -32,16 +33,16 @@ int main(){
   struct Student temp_St;
   if(fS!=NULL){
     while(fread(&temp_St,sizeof(struct Student),1,fS)==1){
-    struct Student **temp_li=(struct Student **)realloc(St,(students+1)*sizeof(struct Student *));
-    St=temp_li;
-    St[students]=(struct Student *)malloc(sizeof(struct Student));
-    memcpy(St[students],&temp_St,sizeof(struct Student));
-    int r=temp_St.seat_row;
-    int c=temp_St.seat_col;
-    if(r>=0 && r<Se.rows && c>=0 && c<Se.cols){
-      Se.seat[r][c]=temp_St.roll;
-    }
-    students++;
+      struct Student **temp_li=(struct Student **)realloc(St,(students+1)*sizeof(struct Student *));
+      St=temp_li;
+      St[students]=(struct Student *)malloc(sizeof(struct Student));
+      memcpy(St[students],&temp_St,sizeof(struct Student));
+      int r=temp_St.seat_row;
+      int c=temp_St.seat_col;
+      if(r>=0&&r<Se.rows&&c>=0&&c<Se.cols){
+        Se.seat[r][c]=temp_St.roll;
+      }
+      students++;
     }
     fclose(fS);
   }
@@ -62,7 +63,7 @@ int main(){
         bool empty_seat=false;
         rA=0;
         cA=0;
-        for(int ro=0; ro<Se.rows;ro++){
+        for(int ro=0;ro<Se.rows;ro++){
           for(int co=0;co<Se.cols;co++){
             if(Se.seat[ro][co]==0){
               rA=ro;
@@ -81,12 +82,12 @@ int main(){
         }
         printf("--- Student %d/%d ---\n",j+1,n);
         printf("Roll Number: ");
-        scanf(" %d", &rollA);
+        scanf(" %d",&rollA);
         printf("Name: ");
-        scanf(" %s", name);
+        scanf(" %s",name);
         bool duplicate=false;
         for(int k=0;k<students;k++){
-          if(St[k] && St[k]->roll==rollA){
+          if(St[k]&&St[k]->roll==rollA){
             printf("Error: Roll Number %d already allocated. Skipping this student.\n",rollA);
             duplicate=true;
             break;
