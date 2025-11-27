@@ -1,14 +1,16 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <time.h>
-#include <stdbool.h>
+#include <time.h> // Objective: Used to add timestamp at the time of allocation/deallocation
+#include <stdbool.h> // Objective: Used to declare the boolean datatype as per need
+// Objective: Structure used to store the student details
 struct Student{
   int roll;
   char name[100];
   int seat_row;
   int seat_col;
 };
+// Objective: Structure used to store the seat on which a student is sitting
 struct Seat{
   int rows,cols;
   int **seat;
@@ -48,6 +50,7 @@ int main(){
     printf("Main Menu:-\n1. Allocate Seat\n2. Deallocate Seat\n3. Display Hall\n4. Search Student\n5. View Log of Students\nEnter Task to be Performed (1-5):");
     scanf(" %d",&t);
     switch(t){
+      // Objective: Perform the task of student allocation along with checking if a student is already allocated or not
       case 1:
       printf("Enter number of students to be allocated:");
       int n;
@@ -120,6 +123,7 @@ int main(){
         printf("%d Students Allocated successfully.\n",n);
       }
       break;
+      // Objective: Perform the task of student deallocation along with checking if the student is present for deallocation or not
       case 2:
       printf("\nRoll Number to deallocate:");
       int rollD;
@@ -165,6 +169,7 @@ int main(){
       fclose(fSD_write);
       printf("Roll Number %d deallocated successfully from Row %d, Column %d.\n",rollD,r+1,c+1);
       break;
+      // Objective: Performing the task of displaying the current hall layout
       case 3:
       printf("\nCurrent hall layout (0 means Empty seat):\n");
       for (int ro=0;ro<Se.rows;ro++){
@@ -174,6 +179,7 @@ int main(){
         printf("\n");
       }
       break;
+      // Objective: Performing the task of searching the location of a student in the hall
       case 4:
       printf("Roll Number:");
       int rollS;
@@ -191,6 +197,7 @@ int main(){
         printf("Student not found.\n");
       }
       break;
+      // Objective: Display the complete list of students which have been allocated/deallocated by now along with their seat position and the time at which that task was performed
       case 5:
       printf("Log of students:\n");
       FILE *fSL=fopen("allocation_log.txt","r");
@@ -209,6 +216,9 @@ int main(){
       printf("Invalid option\n");
       break;
     }
+    // Objective: To ask the user if he/she wants to perform another task or not 
+    // If y, then show the menu again and perform task as per the input
+    // If n, then say thank you and program excution ends
     printf("\nWanna perform another task(y/n):");
     scanf(" %c",&i);
   }
