@@ -1,7 +1,7 @@
 let question=[];
 let i=0;
 let answers=[];
-// Objective: To fetch 15 random questions from a json containing 50 qustions and store them in questions array
+// Objective: To fetch 15 random questions from a json containing 50 questions and store them in questions array
 async function questions(){
     const res=await fetch("Project.json");
     const data=await res.json();
