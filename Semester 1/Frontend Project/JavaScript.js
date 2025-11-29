@@ -25,7 +25,7 @@ async function questions(){
 // Objective: Function used to display questions from the array containing questions
 function display(){
     let q = question[i];
-    document.getElementById("question").innerHTML="<h4>Q"+(i+1)+". "+q.question+"</h4>";
+    document.getElementById("question").innerHTML="<h4>Question "+(i+1)+" 15"+q.question+"</h4>";
     if (i==0){
         document.getElementById("option").innerHTML="<div class='p-3'>"+"<label class='option-block'><input type='radio' name='opt' value='0'"+(answers[i]==0?"checked":"")+">"+q.options[0]+"</label><hr>"+"<label class='option-block'><input type='radio' name='opt' value='1'"+(answers[i]==1?"checked":"")+">"+q.options[1]+"</label><hr>"+"<label class='option-block'><input type='radio' name='opt' value='2'"+(answers[i]==2?"checked":"")+">"+q.options[2]+"</label><hr>"+"<label class='option-block'><input type='radio' name='opt' value='3'"+(answers[i]==3?"checked":"")+">"+q.options[3]+"</label>"+"</div><br>"+"<button class='btn btn-primary float-end' onclick='next()'>Next</button>";
     }
