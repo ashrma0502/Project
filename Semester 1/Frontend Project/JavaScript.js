@@ -84,7 +84,7 @@ function submit(){
     localStorage.setItem("questions",JSON.stringify(question));
     window.location.href="Result.html";
 }
-// Objective: Function to show the result of the test and show the correct answers for the questions in which the asnwers were wrong 
+// Objective: Function to show the result of the test and show the correct answers for the questions in which the answers were wrong 
 function result(){
     let total=localStorage.getItem("score");
     let answers=JSON.parse(localStorage.getItem("answers"));
