@@ -138,6 +138,16 @@
             margin-top: 4px;
             line-height: 1.35;
         }
+
+        .low-conf {
+            color: #dc2626;
+            font-weight: bold;
+        }
+
+        .high-conf {
+            color: #166534;
+            font-weight: bold;
+        }
     </style>
 </head>
 
@@ -185,7 +195,8 @@
     </div>
     <script>
         const API = "http://127.0.0.1:8000";
-        // ---------- Polling ----------
+
+        // Polling
         let pollId = null;
         async function fetchStatus() {
             try {
@@ -223,10 +234,11 @@
             }, 800);
         }
 
-        // AUTO AUDIO
+        // Auto Speech
         let lastSpoken = "";
         let lastSpokenAt = 0;
         const SPEAK_COOLDOWN_MS = 900;
+
         function autoSpeak(text) {
             if (!text) return;
             const now = Date.now();
@@ -240,18 +252,100 @@
             lastSpokenAt = now;
         }
 
+        // Sentence Builder 
+        const WORD_MAP = {
+            // Basic gestures
+            "FIST": "__END__",
+            "OPEN_PALM": "HELLO",
+            "ONE": "I",
+            "TWO": "YOU",
+            "THREE": "WE",
+            "FOUR": "THEY",
+            "THREE_LAST": "FRIENDS",
+            "TWO_LAST": "US",
+            "THUMBS_UP": "YES",
+            "PINKY": "__BACKSPACE__",
+            "RING": "THANKYOU",
+            "MIDDLE": "ME",
+            "HANG_LOOSE": "__CLEAR__",
+            "GUN": "NO",
+            "LOVE_SIGN": "LOVE"
+        };
+
+        let sentenceWords = [];
+        let stableGesture = "";
+        let stableCount = 0;
+        let lastAcceptedGesture = "";
+        let lastAcceptedAt = 0;
+
+        // Tuning knobs
+        const STABLE_FRAMES = 6;     // how many same gesture frames to accept a word
+        const MIN_CONF = 0.60;       // your threshold
+        const ACCEPT_COOLDOWN = 800; // ms (prevents double-accept)
+
+        function handleGestureForSentence(s) {
+            const g = s?.gesture ?? "UNKNOWN";
+            const conf = (typeof s?.gesture_confidence === "number") ? s.gesture_confidence : 0;
+
+            // reject low quality
+            if (g === "UNKNOWN" || conf < MIN_CONF) {
+                stableGesture = "";
+                stableCount = 0;
+                return;
+            }
+            // stabilize
+            if (g === stableGesture) stableCount++;
+            else { stableGesture = g; stableCount = 1; }
+            const now = Date.now();
+            // accept only when stable enough + cooldown passed
+            if (stableCount >= STABLE_FRAMES && (now - lastAcceptedAt) > ACCEPT_COOLDOWN) {
+                // avoid repeating same accepted gesture instantly
+                if (g === lastAcceptedGesture) return;
+                lastAcceptedGesture = g;
+                lastAcceptedAt = now;
+                const word = WORD_MAP[g];
+                if (!word) return; // if not mapped, ignore
+                if (word === "__END__") {
+                    const sentence = sentenceWords.join(" ").trim();
+                    if (sentence) {
+                        document.getElementById("gestureText").innerText = sentence;
+                        autoSpeak(sentence);
+                    }
+                    sentenceWords = [];
+                    return;
+                }
+                if (word === "__BACKSPACE__") {
+                    sentenceWords.pop();
+                } else if (word === "__SPACE__") {
+                    // optional: do nothing (spaces are already between words)
+                } else {
+                    sentenceWords.push(word);
+                }
+                const preview = sentenceWords.join(" ");
+                document.getElementById("gestureText").innerText = preview || "Waiting for input...";
+            }
+        }
+
         // UI
         function renderUI(s) {
             const gestureEl = document.getElementById("gestureText");
             const moodEl = document.getElementById("moodText");
             const confEl = document.getElementById("confText");
-            let gesture = "UNKNOWN";
-            let confidence = 0.0;
-            if (s && s.gesture) gesture = s.gesture;
-            if (s && typeof s.gesture_confidence === "number") confidence = s.gesture_confidence;
-            // mood logic
+            const gesture = s?.gesture ?? "UNKNOWN";
+            const confidence = (typeof s?.gesture_confidence === "number") ? s.gesture_confidence : 0;
+            // Color change based on confidence
+            gestureEl.classList.remove("low-conf", "high-conf");
+            if (gesture !== "UNKNOWN") {
+                if (confidence < 0.5) gestureEl.classList.add("low-conf");
+                else gestureEl.classList.add("high-conf");
+            }
+            
+            // mood rule
             const mood = (confidence > 0.6) ? "Confident" : "Nervous";
-            gestureEl.innerText = (gesture !== "UNKNOWN") ? gesture : "Waiting for gesture...";
+            // show live status
+            if (sentenceWords.length === 0) {
+                gestureEl.innerText = (gesture !== "UNKNOWN") ? gesture : "Waiting for gesture...";
+            }
             moodEl.innerText = `Mood: ${gesture !== "UNKNOWN" ? mood : "--"}`;
             confEl.innerText = `Confidence: ${gesture !== "UNKNOWN" ? confidence.toFixed(2) : "--"}`;
             const gloveText = s?.glove ?? "DISCONNECTED";
@@ -260,20 +354,12 @@
             let modeText = "Offline";
             if (cameraText === "FRONTEND" || cameraText === "ON") modeText = "Real-time (Camera)";
             if (gloveText === "CONNECTED") modeText = "Real-time (Glove + Camera)";
-            document.getElementById("statusList").innerHTML = `
-        <li>Glove Connection: ${gloveText}</li>
-        <li>Camera: ${cameraText}</li>
-        <li>AI Model: ${modelText}</li>
-        <li>Translation Mode: ${modeText}</li>
-      `;
-            // Speak gesture + confidence + mood
-            if (gesture !== "UNKNOWN") {
-                const speechText = `${gesture}`;
-                if (speechText !== lastSpoken) {
-                    autoSpeak(speechText);
-                    lastSpoken = speechText;
-                }
-            }
+            document.getElementById("statusList").innerHTML = `<li>Glove Connection: ${gloveText}</li>
+            <li>Camera: ${cameraText}</li>
+            <li>AI Model: ${modelText}</li>
+            <li>Translation Mode: ${modeText}</li>`;
+            // Sentence build logic
+            handleGestureForSentence(s);
         }
 
         // Smooth frame sending
@@ -366,7 +452,7 @@
                 video.onloadedmetadata = async () => {
                     await video.play();
                     startPolling();
-                    startSendingFrames();
+                    startSendingFrames(); // send frames to backend
                 };
             } catch (e) {
                 alert("Camera access denied or not available");

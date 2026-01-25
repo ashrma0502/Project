@@ -143,7 +143,7 @@ def compute_metrics():
 # WORKER
 def worker():
     global glove_status, landmarker, latest_flex, latest_flex_ts
-    ESP32_IP = "192.168.1.10"
+    ESP32_IP = "172.18.54.161"
     ESP32_PORT = 5000
     MODEL_PATH = "hand_landmarker.task"
 
@@ -277,31 +277,33 @@ def process_frame(payload: FrameIn):
     # Fuse with latest flex
     flex_threshold = {"Thumb": 400, "Index": 420, "Middle": 430, "Ring": 415, "Pinky": 405}
     gesture_map = {
-        (0,0,0,0,0): "FIST / CLOSED HAND",
-        (1,1,1,1,1): "OPEN PALM",
+        (0,0,0,0,0): "FIST",
+        (1,1,1,1,1): "OPEN_PALM",
         (0,1,0,0,0): "ONE",
         (0,1,1,0,0): "TWO",
         (0,1,1,1,0): "THREE",
         (0,1,1,1,1): "FOUR",
-        (1,0,0,0,0): "THUMBS UP",
+        (0,0,1,1,1): "THREE_LAST",
+        (0,0,0,1,1): "TWO_LAST",
+        (1,0,0,0,0): "THUMBS_UP",
         (0,0,0,0,1): "PINKY",
         (0,0,0,1,0): "RING",
         (0,0,1,0,0): "MIDDLE",
-        (0,1,0,0,1): "HANG LOOSE",
+        (0,1,0,0,1): "HANG_LOOSE",
         (1,1,0,0,0): "GUN",
-        (0,1,1,0,1): "LOVE SIGN",
+        (0,1,1,0,1): "LOVE_SIGN",
     }
-
     fused = fuse_features(latest_flex, finger_states, flex_threshold)
     gesture = gesture_map.get(fused, "UNKNOWN") if fused is not None else "UNKNOWN"
     # History tracking
-    gesture_hist.append(gesture)
+    if gesture != "UNKNOWN":
+        gesture_hist.append(gesture)
     score_hist.append(float(vision_score))
     if landmarks is not None:
         wrist = landmarks[0]  # wrist landmark
         wrist_hist.append((float(wrist.x), float(wrist.y)))
     else:
-        wrist_hist.append((0.0, 0.0))
+        pass
     metrics = compute_metrics()
     # store latest gesture using metrics
     global latest_confidence, latest_stability, latest_vision, latest_consistency
@@ -329,4 +331,5 @@ def process_frame(payload: FrameIn):
         "stability": latest_stability,
         "vision_score": latest_vision,
         "consistency": latest_consistency,
+        "is_stable": True if metrics else False
     }
