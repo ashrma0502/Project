@@ -79,7 +79,7 @@
         }
 
         .output-box {
-            height: 110px;
+            min-height: 110px;
             border: 2px dashed #84cc16;
             border-radius: 10px;
             padding: 10px;
@@ -139,14 +139,19 @@
             line-height: 1.35;
         }
 
-        .low-conf {
-            color: #dc2626;
-            font-weight: bold;
+        .lang-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
         }
 
-        .high-conf {
-            color: #166534;
-            font-weight: bold;
+        .lang-row button {
+            flex: 1;
+            margin-top: 0;
+        }
+
+        .active-lang {
+            outline: 3px solid #166534;
         }
     </style>
 </head>
@@ -157,30 +162,43 @@
             <img src="logo.jpg" alt="GLA University Logo" />
             <h1>Smart Sign Language Translation System</h1>
         </div>
+
         <div class="grid">
             <div class="card">
                 <span class="badge">Wearable Input</span>
                 <h2>Gesture Input (Glove)</h2>
                 <p>Receive real-time gesture data from the smart wearable glove.</p>
-                <button onclick="connectGlove()">Connect Glove</button>
+                <button type="button" onclick="connectGlove()">Connect Glove</button>
             </div>
+
             <div class="card">
                 <span class="badge">Vision Input</span>
                 <h2>Camera Based Sign Detection</h2>
                 <p>Use camera for vision-based sign language recognition.</p>
-                <button onclick="startCamera()">Start Camera</button>
+                <button type="button" onclick="startCamera()">Start Camera</button>
                 <video id="video" autoplay playsinline muted></video>
             </div>
+
             <div class="card">
                 <span class="badge">AI Output</span>
                 <h2>Translated Output</h2>
+
                 <div class="output-box" id="outputBox">
                     <div id="gestureText">Waiting for input...</div>
                     <div class="tiny" id="moodText">Mood: --</div>
                     <div class="tiny" id="confText">Confidence: --</div>
                 </div>
+
+                <div class="lang-row">
+                    <button id="btnEn" type="button" onclick="setLang('en')">English</button>
+                    <button id="btnHi" type="button" onclick="setLang('hi')">Hindi</button>
+                </div>
+
+                <!-- ✅ Sound ONLY when this button is clicked -->
+                <button class="speak-btn" type="button" onclick="speakOutput()">Speak</button>
             </div>
         </div>
+
         <div class="card" style="margin-top: 20px;">
             <span class="badge">System Status</span>
             <h2>System Status</h2>
@@ -189,12 +207,17 @@
                 <li>Camera: Off</li>
                 <li>AI Model: Idle</li>
                 <li>Translation Mode: Offline</li>
+                <li>Language: English</li>
             </ul>
         </div>
+
         <footer>© GLA University, Mathura | AI Based Assistive Technology Project</footer>
     </div>
+
     <script>
         const API = "http://127.0.0.1:8000";
+        // Language
+        let LANG = "en"; // "en" or "hi"
 
         // Polling
         let pollId = null;
@@ -209,19 +232,24 @@
         }
 
         function setStatusFallback() {
-            document.getElementById("statusList").innerHTML = `<li>Glove Connection: Disconnected</li>
-            <li>Camera: Off</li>
-            <li>AI Model: Idle</li>
-            <li>Translation Mode: Offline</li>`;
+            document.getElementById("statusList").innerHTML = `
+        <li>Glove Connection: Disconnected</li>
+        <li>Camera: Off</li>
+        <li>AI Model: Idle</li>
+        <li>Translation Mode: Offline</li>
+        <li>Language: ${LANG === "hi" ? "Hindi" : "English"}</li>
+      `;
         }
 
         function startPolling() {
             if (pollId) return;
+
             (async () => {
                 const s = await fetchStatus();
                 if (s) renderUI(s);
                 else setStatusFallback();
             })();
+
             pollId = setInterval(async () => {
                 const s = await fetchStatus();
                 if (s) renderUI(s);
@@ -234,27 +262,9 @@
             }, 800);
         }
 
-        // Auto Speech
-        let lastSpoken = "";
-        let lastSpokenAt = 0;
-        const SPEAK_COOLDOWN_MS = 900;
 
-        function autoSpeak(text) {
-            if (!text) return;
-            const now = Date.now();
-            if ((now - lastSpokenAt) < SPEAK_COOLDOWN_MS) return;
-            window.speechSynthesis.cancel();
-            const speech = new SpeechSynthesisUtterance(text);
-            speech.lang = "en-US";
-            speech.rate = 1;
-            speech.pitch = 1;
-            window.speechSynthesis.speak(speech);
-            lastSpokenAt = now;
-        }
-
-        // Sentence Builder 
+        // Sentence Word Maps
         const WORD_MAP = {
-            // Basic gestures
             "FIST": "__END__",
             "OPEN_PALM": "HELLO",
             "ONE": "I",
@@ -271,7 +281,26 @@
             "GUN": "NO",
             "LOVE_SIGN": "LOVE"
         };
+        
+        const HINDI_MAP = {
+            "FIST": "__END__",
+            "OPEN_PALM": "नमस्ते",
+            "ONE": "मैं",
+            "TWO": "तुम",
+            "THREE": "हम",
+            "FOUR": "वे",
+            "THREE_LAST": "दोस्त",
+            "TWO_LAST": "हमें",
+            "THUMBS_UP": "हाँ",
+            "PINKY": "__BACKSPACE__",
+            "RING": "धन्यवाद",
+            "MIDDLE": "मुझे",
+            "HANG_LOOSE": "__CLEAR__",
+            "GUN": "नहीं",
+            "LOVE_SIGN": "प्यार"
+        };
 
+        // Sentence Builder
         let sentenceWords = [];
         let stableGesture = "";
         let stableCount = 0;
@@ -279,14 +308,13 @@
         let lastAcceptedAt = 0;
 
         // Tuning knobs
-        const STABLE_FRAMES = 6;     // how many same gesture frames to accept a word
-        const MIN_CONF = 0.60;       // your threshold
-        const ACCEPT_COOLDOWN = 800; // ms (prevents double-accept)
+        const STABLE_FRAMES = 6;
+        const MIN_CONF = 0.60;
+        const ACCEPT_COOLDOWN = 800;
 
         function handleGestureForSentence(s) {
             const g = s?.gesture ?? "UNKNOWN";
             const conf = (typeof s?.gesture_confidence === "number") ? s.gesture_confidence : 0;
-
             // reject low quality
             if (g === "UNKNOWN" || conf < MIN_CONF) {
                 stableGesture = "";
@@ -299,50 +327,50 @@
             const now = Date.now();
             // accept only when stable enough + cooldown passed
             if (stableCount >= STABLE_FRAMES && (now - lastAcceptedAt) > ACCEPT_COOLDOWN) {
-                // avoid repeating same accepted gesture instantly
+                // prevent repeated accept of same gesture
                 if (g === lastAcceptedGesture) return;
                 lastAcceptedGesture = g;
                 lastAcceptedAt = now;
-                const word = WORD_MAP[g];
-                if (!word) return; // if not mapped, ignore
+                // language-aware mapping
+                let word = null;
+                if (LANG === "hi") word = HINDI_MAP[g] || WORD_MAP[g];
+                else word = WORD_MAP[g];
+                if (!word) return;
                 if (word === "__END__") {
                     const sentence = sentenceWords.join(" ").trim();
-                    if (sentence) {
-                        document.getElementById("gestureText").innerText = sentence;
-                        autoSpeak(sentence);
-                    }
+                    document.getElementById("gestureText").innerText = sentence || "Waiting for input...";
                     sentenceWords = [];
                     return;
                 }
-                if (word === "__BACKSPACE__") {
-                    sentenceWords.pop();
-                } else if (word === "__SPACE__") {
-                    // optional: do nothing (spaces are already between words)
-                } else {
-                    sentenceWords.push(word);
-                }
+                if (word === "__BACKSPACE__") sentenceWords.pop();
+                else if (word === "__CLEAR__") sentenceWords = [];
+                else sentenceWords.push(word);
                 const preview = sentenceWords.join(" ");
                 document.getElementById("gestureText").innerText = preview || "Waiting for input...";
             }
         }
 
-        // UI
+        // UI Render
         function renderUI(s) {
             const gestureEl = document.getElementById("gestureText");
             const moodEl = document.getElementById("moodText");
             const confEl = document.getElementById("confText");
             const gesture = s?.gesture ?? "UNKNOWN";
             const confidence = (typeof s?.gesture_confidence === "number") ? s.gesture_confidence : 0;
-            // Color change based on confidence
-            gestureEl.classList.remove("low-conf", "high-conf");
+
+            // color based on confidence (red if low)
             if (gesture !== "UNKNOWN") {
-                if (confidence < 0.5) gestureEl.classList.add("low-conf");
-                else gestureEl.classList.add("high-conf");
+                gestureEl.style.color = (confidence < 0.60) ? "#dc2626" : "#166534";
+                gestureEl.style.fontWeight = "bold";
+            } else {
+                gestureEl.style.color = "#365314";
+                gestureEl.style.fontWeight = "normal";
             }
-            
-            // mood rule
+
+            // mood
             const mood = (confidence > 0.6) ? "Confident" : "Nervous";
-            // show live status
+
+            // Only show raw gesture if no sentence being built
             if (sentenceWords.length === 0) {
                 gestureEl.innerText = (gesture !== "UNKNOWN") ? gesture : "Waiting for gesture...";
             }
@@ -354,10 +382,14 @@
             let modeText = "Offline";
             if (cameraText === "FRONTEND" || cameraText === "ON") modeText = "Real-time (Camera)";
             if (gloveText === "CONNECTED") modeText = "Real-time (Glove + Camera)";
-            document.getElementById("statusList").innerHTML = `<li>Glove Connection: ${gloveText}</li>
-            <li>Camera: ${cameraText}</li>
-            <li>AI Model: ${modelText}</li>
-            <li>Translation Mode: ${modeText}</li>`;
+            document.getElementById("statusList").innerHTML = `
+        <li>Glove Connection: ${gloveText}</li>
+        <li>Camera: ${cameraText}</li>
+        <li>AI Model: ${modelText}</li>
+        <li>Translation Mode: ${modeText}</li>
+        <li>Language: ${LANG === "hi" ? "Hindi" : "English"}</li>
+      `;
+
             // Sentence build logic
             handleGestureForSentence(s);
         }
@@ -379,13 +411,8 @@
             if (!vw || !vh) return null;
             let w = vw, h = vh;
             if (Math.max(vw, vh) > MAX_SIDE) {
-                if (vw >= vh) {
-                    w = MAX_SIDE;
-                    h = Math.round((vh / vw) * MAX_SIDE);
-                } else {
-                    h = MAX_SIDE;
-                    w = Math.round((vw / vh) * MAX_SIDE);
-                }
+                if (vw >= vh) { w = MAX_SIDE; h = Math.round((vh / vw) * MAX_SIDE); }
+                else { h = MAX_SIDE; w = Math.round((vw / vh) * MAX_SIDE); }
             }
             canvas.width = w;
             canvas.height = h;
@@ -452,14 +479,38 @@
                 video.onloadedmetadata = async () => {
                     await video.play();
                     startPolling();
-                    startSendingFrames(); // send frames to backend
+                    startSendingFrames();
                 };
-            } catch (e) {
+            } catch {
                 alert("Camera access denied or not available");
             }
         };
 
-        window.addEventListener("load", () => startPolling());
+        window.setLang = function (lang) {
+            LANG = (lang === "hi") ? "hi" : "en";
+            // UI highlight
+            document.getElementById("btnEn").classList.toggle("active-lang", LANG === "en");
+            document.getElementById("btnHi").classList.toggle("active-lang", LANG === "hi");
+        };
+
+        // Speak ONLY when button is clicked
+        window.speakOutput = function () {
+            const text = document.getElementById("gestureText").innerText;
+            if (!text) return;
+            if (text.includes("Waiting") || text.includes("Backend")) return;
+            window.speechSynthesis.cancel();
+            const speech = new SpeechSynthesisUtterance(text);
+            speech.lang = (LANG === "hi") ? "hi-IN" : "en-US";
+            speech.rate = 1;
+            speech.pitch = 1;
+            window.speechSynthesis.speak(speech);
+        };
+
+        // Start polling on load + set default language button highlight
+        window.addEventListener("load", () => {
+            startPolling();
+            setLang("en");
+        });
     </script>
 </body>
 
