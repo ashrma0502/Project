@@ -6,3 +6,4 @@ env/
 **/.venv/
 **/env/ 
 "world_bank/" 
+__pycache__
