@@ -1,0 +1,98 @@
+api:
+  base_url: https://api.worldbank.org/v2
+  format: json
+  date_range: 2023:2024
+  max_page: 1
+  max_retries: 5
+
+  endpoints:
+    indicator: /indicator
+    country: /country
+    sources: /source
+    countries:
+      india:
+        iso2code: IN
+        iso3code: IND
+        numeric: 365
+        name: India
+      china:
+        iso2code: CN
+        iso3code: CHN
+        numeric: 156
+        name: China
+      united_states:
+        iso2code: US
+        iso3code: USA
+        numeric: 840
+        name: United States
+      brazil:
+        iso2code: BR
+        iso3code: BRA
+        numeric: 076
+        name: Brazil
+      south_africa:
+        iso2code: ZA
+        iso3code: ZAF
+        numeric: 710
+        name: South Africa
+
+    indicator_id:
+      gdp:
+        code: NY.GDP.MKTP.CD
+        name: GDP
+      population:
+        code: SP.POP.TOTL
+        name: Total Population
+      life_expectancy:
+        code: SP.DYN.LE00.IN
+        name: Life Expectancy
+      inflation:
+        code: FP.CPI.TOTL.ZG
+        name: Inflation
+      unemployment:
+        code: SL.UEM.TOTL.ZS
+        name: Unemployment
+
+output:
+  data: data
+  bronze:
+    path: bronze
+    world_bank: world_bank
+    batch_size: 1
+  logs: logs
+  sql:
+    base: sql
+    sql_ddl: ddl
+    sql_silver: silver_load
+    sql_gold: gold_build
+
+sql_server:
+  dialect: mysql
+  driver: pymysql
+  host: localhost
+  user: root
+  password: Techno@blast
+  port: 3306
+  database: world_bank_pipeline
+
+logging:
+  level: INFO
+  log_files:
+    bronze:
+      file: bronze.log
+      log_to_file: true
+      log_to_console: false
+    silver:
+      file: silver.log
+      log_to_file: true
+      log_to_console: false
+    gold:
+      file: gold.log
+      log_to_file: true
+      log_to_console: false
+    summary:
+      file: summary.log
+      log_to_file: true
+      log_to_console: true
+  max_file_size_mb: 1
+  backup_count: 10
